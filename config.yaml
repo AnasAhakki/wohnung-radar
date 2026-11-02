@@ -3,10 +3,10 @@
 searches:
   - name: Kleinanzeigen
     site: kleinanzeigen
-    url: HIER_KLEINANZEIGEN_LINK
+    url: "https://www.kleinanzeigen.de/s-wohnung-mieten/mannheim/sortierung:neuste/anzeige:angebote/preis::1100/c203l7971+wohnung_mieten.zimmer_d:2.0,2.5"
   - name: WG-Gesucht
     site: wg-gesucht
-    url: HIER_WGGESUCHT_LINK
+    url: "https://www.wg-gesucht.de/wohnungen-in-Mannheim.85.2.1.0.html?offer_filter=1&city_id=85&sort_order=0&noDeact=1&categories%5B%5D=2&rMax=1200&rmMin=2&rmMax=2"
 
 filter:
   min_rooms: 2
