@@ -7,6 +7,9 @@ searches:
   - name: WG-Gesucht
     site: wg-gesucht
     url: "https://www.wg-gesucht.de/wohnungen-in-Mannheim.85.2.1.0.html?offer_filter=1&city_id=85&sort_order=0&noDeact=1&categories%5B%5D=2&rMax=1200&rmMin=2&rmMax=2"
+  - name: Immowelt
+    site: immowelt
+    url: "https://www.immowelt.de/classified-search?distributionTypes=Rent&estateTypes=Apartment&locations=AD08DE5642&numberOfRoomsMax=2.5&numberOfRoomsMin=2&priceMax=1100&order=DateDesc"
 
 filter:
   min_rooms: 2
