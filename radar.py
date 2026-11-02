@@ -106,7 +106,7 @@ session.headers.update(HEADERS)
 
 def get(url):
     r = session.get(url, timeout=25)
-    if r.status_code in (403, 429) or "captcha" in r.text.lower()[:5000]:
+    if r.status_code in (403, 429):
         raise PermissionError(f"blockiert ({r.status_code})")
     r.raise_for_status()
     return r.text
