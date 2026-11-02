@@ -48,7 +48,8 @@ def money(text):
 
 def find_amount(text, *labels):
     for label in labels:
-        m = re.search(label + r"[^\d€]{0,25}(\d[\d.]*(?:,\d{1,2})?)\s*(?:€|EUR|Euro)", text, re.I)
+        m = re.search(label + r"\b[^\n\d€]{0,30}(?:\n[^\n\d€]*)?\n?\s*(\d[\d.]*(?:,\d{1,2})?)\s*(?:€|EUR|Euro)",
+                      text, re.I)
         if m:
             return money(m.group(1))
     return None
@@ -134,7 +135,7 @@ def parse_detail(site, url):
     title = title.get_text(" ", strip=True) if title else "Wohnung"
 
     ad = {"site": site, "url": url, "title": title[:90], "text": text}
-    ad["kalt"] = find_amount(text, r"Kaltmiete", r"Nettokaltmiete", r"\bMiete(?! inkl)")
+    ad["kalt"] = find_amount(text, r"Kaltmiete", r"Nettokaltmiete", r"\bMiete(?=\b)(?!\s*inkl)")
     if site == "kleinanzeigen":
         price = soup.select_one("#viewad-price")
         if price:
@@ -151,7 +152,7 @@ def parse_detail(site, url):
     ad["kaution"] = find_amount(text, r"Kaution", r"Mietsicherheit")
     ad["m2"] = find_number(text, r"(?:Wohnfläche|Größe)[^\d]{0,15}(\d+(?:,\d+)?)\s*m²") \
         or find_number(text, r"(\d+(?:,\d+)?)\s*m²")
-    ad["zimmer"] = find_number(text, r"Zimmer[^\d]{0,10}(\d(?:,5)?)\b") \
+    ad["zimmer"] = find_number(text, r"\bZimmer\s*:?\s*\n?\s*(\d(?:,5)?)\s*(?:\n|$)") \
         or find_number(text, r"(\d(?:,5)?)\s*-?\s*Zi(?:mmer)?\b")
     ad["frei"] = find_date(text)
     ad["kitchen"] = detect_kitchen(text)
