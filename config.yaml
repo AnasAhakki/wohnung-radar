@@ -1,0 +1,24 @@
+# Suchen: Filter auf der Website einstellen, nach "Neueste zuerst" sortieren,
+# dann die Adresse aus dem Browser hier einfügen.
+searches:
+  - name: Kleinanzeigen
+    site: kleinanzeigen
+    url: HIER_KLEINANZEIGEN_LINK
+  - name: WG-Gesucht
+    site: wg-gesucht
+    url: HIER_WGGESUCHT_LINK
+
+filter:
+  min_rooms: 2
+  max_rooms: 2.5
+  max_warm: 1200            # Euro
+  assumed_nk_if_unknown: 200 # wenn nur Kaltmiete bekannt ist
+
+# Bewertung nach Kaltmiete pro m².
+# Mannheim 2026: Ø Angebotsmiete 2 Zimmer ca. 12,50–13 €/m².
+rating:
+  suspicious_below: 7.0
+  cheap_up_to: 11.0
+  fair_up_to: 14.0
+
+max_details_per_run: 30
