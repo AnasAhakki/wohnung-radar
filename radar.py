@@ -48,7 +48,7 @@ def money(text):
 
 def find_amount(text, *labels):
     for label in labels:
-        m = re.search(label + r"[^\d€\n]{0,25}(\d[\d.]*(?:,\d{1,2})?)\s*(?:€|EUR|Euro)", text, re.I)
+        m = re.search(label + r"[^\d€]{0,25}(\d[\d.]*(?:,\d{1,2})?)\s*(?:€|EUR|Euro)", text, re.I)
         if m:
             return money(m.group(1))
     return None
@@ -60,7 +60,7 @@ def find_number(text, pattern):
 
 
 def find_date(text):
-    m = re.search(r"(?:verfügbar|frei|bezugsfrei|einzug)[^\n]{0,20}?(ab\s*)?(sofort|\d{1,2}\.\d{1,2}\.\d{2,4}|"
+    m = re.search(r"(?:verfügbar|frei|bezugsfrei|einzug)[^\d\n]{0,20}?(ab\s*)?\n?\s*(sofort|\d{1,2}\.\d{1,2}\.\d{2,4}|"
                   r"(?:januar|februar|märz|april|mai|juni|juli|august|september|oktober|november|dezember)\s*\d{4})",
                   text, re.I)
     return m.group(2) if m else None
@@ -149,9 +149,9 @@ def parse_detail(site, url):
     ad["nk"] = find_amount(text, r"Nebenkosten", r"Betriebskosten")
     ad["heiz"] = find_amount(text, r"Heizkosten")
     ad["kaution"] = find_amount(text, r"Kaution", r"Mietsicherheit")
-    ad["m2"] = find_number(text, r"(?:Wohnfläche|Größe)[^\d\n]{0,15}(\d+(?:,\d+)?)\s*m²") \
+    ad["m2"] = find_number(text, r"(?:Wohnfläche|Größe)[^\d]{0,15}(\d+(?:,\d+)?)\s*m²") \
         or find_number(text, r"(\d+(?:,\d+)?)\s*m²")
-    ad["zimmer"] = find_number(text, r"Zimmer[^\d\n]{0,10}(\d(?:,5)?)\b") \
+    ad["zimmer"] = find_number(text, r"Zimmer[^\d]{0,10}(\d(?:,5)?)\b") \
         or find_number(text, r"(\d(?:,5)?)\s*-?\s*Zi(?:mmer)?\b")
     ad["frei"] = find_date(text)
     ad["kitchen"] = detect_kitchen(text)
@@ -164,7 +164,7 @@ def parse_detail(site, url):
 
 def matches(ad):
     f = CONFIG["filter"]
-    if re.search(r"\b(suche|gesucht|tausch)\b", ad["title"], re.I):
+    if re.search(r"\b(suche|tausch\w*)\b", ad["title"], re.I):
         return False
     if ad["zimmer"] and not (f["min_rooms"] <= ad["zimmer"] <= f["max_rooms"]):
         return False
