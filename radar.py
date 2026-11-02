@@ -31,7 +31,7 @@ HEADERS = {
 LINK_PATTERNS = {
     "kleinanzeigen": re.compile(r"^/s-anzeige/[^?#]+/(\d+)-\d+-\d+"),
     "wg-gesucht": re.compile(r"/wohnungen-in-[^/?#]+\.(\d+)\.html"),
-    "immowelt": re.compile(r"/expose/([a-z0-9]+)", re.I),
+    "immowelt": re.compile(r"/expose/([a-z0-9-]+)", re.I),
 }
 
 
@@ -142,6 +142,20 @@ def parse_detail(site, url):
             ad["kalt"] = money(price.get_text())
         loc = soup.select_one("#viewad-locality")
         ad["ort"] = loc.get_text(" ", strip=True) if loc else None
+    elif site == "immowelt":
+        # Immowelt: Betrag steht VOR der Beschriftung ("700 €" / "Kaltmiete")
+        def before(label):
+            m = re.search(r"(\d[\d.]*(?:,\d{1,2})?)\s*€\s*\n\s*" + label, text)
+            return money(m.group(1)) if m else None
+        ad["kalt"] = before("Kaltmiete")
+        og = soup.find("meta", property="og:title") or soup.find("title")
+        if og:
+            ad["title"] = (og.get("content") or og.get_text(" ", strip=True)).split("|")[0].strip()[:90]
+        zm = re.search(r"(\d(?:,5)?)\s*Zimmer\s*\n\s*•", text)
+        ad["zimmer_iw"] = float(zm.group(1).replace(",", ".")) if zm else None
+        ad["warm_iw"] = before("Warmmiete")
+        m = re.search(r"([^\n]{0,40}Mannheim\s*\(6\d{4}\))", text)
+        ad["ort"] = m.group(1).strip(" ,") if m else None
     else:
         m = re.search(r"\b(6\d{4})\s+Mannheim[^\n]{0,40}", text)
         ad["ort"] = m.group(0) if m else None
@@ -150,10 +164,17 @@ def parse_detail(site, url):
     ad["nk"] = find_amount(text, r"Nebenkosten", r"Betriebskosten")
     ad["heiz"] = find_amount(text, r"Heizkosten")
     ad["kaution"] = find_amount(text, r"Kaution", r"Mietsicherheit")
+    if site == "immowelt":
+        ad["warm"] = ad.pop("warm_iw")
+    km = re.search(r"Kaution[^\n\d]{0,5}\n?\s*(\d)\s*(?:Netto)?kaltmiete", text, re.I)
+    if km and ad["kalt"]:
+        ad["kaution"] = int(km.group(1)) * ad["kalt"]
     ad["m2"] = find_number(text, r"(?:Wohnfläche|Größe)[^\d]{0,15}(\d+(?:,\d+)?)\s*m²") \
         or find_number(text, r"(\d+(?:,\d+)?)\s*m²")
     ad["zimmer"] = find_number(text, r"\bZimmer\s*:?\s*\n?\s*(\d(?:,5)?)\s*(?:\n|$)") \
         or find_number(text, r"(\d(?:,5)?)\s*-?\s*Zi(?:mmer)?\b")
+    if site == "immowelt":
+        ad["zimmer"] = ad.pop("zimmer_iw") or ad["zimmer"]
     ad["frei"] = find_date(text)
     ad["kitchen"] = detect_kitchen(text)
 
