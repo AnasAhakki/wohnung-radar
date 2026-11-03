@@ -241,6 +241,62 @@ def send(text):
     time.sleep(1.2)
 
 
+# ---------------------------------------------------------------- Mails (ImmoScout24, Immowelt)
+def amount_near(text, label):
+    """Betrag direkt vor oder nach einer Beschriftung."""
+    num = r"(?P<n>\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:,\d{1,2})?)"
+    m = re.search(num + r"\s*(?:€|EUR)\s*\n?\s*\(?\s*" + label, text, re.I) \
+        or re.search(label + r"[^\d\n]{0,15}\n?\s*" + num + r"\s*(?:€|EUR)", text, re.I)
+    return money(m.group("n")) if m else None
+
+
+def parse_mail_ad(key, url, text, site, subject):
+    lines = [l for l in text.split("\n") if l.strip()]
+    title = next((l for l in lines if len(l) > 15 and "€" not in l and "m²" not in l), subject)
+    ad = {"site": site, "url": url, "title": title[:90], "text": text, "ort": None, "heiz": None,
+          "kaution": None, "frei": None}
+    ad["kalt"] = amount_near(text, "Kaltmiete") or amount_near(text, "kalt")
+    ad["warm"] = amount_near(text, "Warmmiete") or amount_near(text, "warm")
+    ad["nk"] = amount_near(text, "Nebenkosten")
+    if not ad["kalt"] and not ad["warm"]:
+        ad["kalt"] = money((re.search(r"\d[\d.]*(?:,\d{1,2})?\s*€", text) or [None])[0])
+    ad["m2"] = find_number(text, r"(\d+(?:,\d+)?)\s*(?:m²|qm)")
+    ad["zimmer"] = find_number(text, r"(\d(?:,5)?)\s*(?:Zi\.?|Zimmer)\b") \
+        or find_number(text, r"Zimmer\s*:?\s*\n?\s*(\d(?:,5)?)\b")
+    m = re.search(r"([^\n]{0,50}\b6\d{4}\b[^\n]{0,30})", text) or re.search(r"([^\n]{0,40}Mannheim[^\n]{0,30})", text)
+    ad["ort"] = m.group(1).strip(" ,·|") if m else None
+    ad["kitchen"] = detect_kitchen(text)
+    if not ad["warm"] and ad["kalt"] and ad["nk"]:
+        ad["warm"] = ad["kalt"] + ad["nk"]
+    return ad
+
+
+def check_mails(seen, warned, now):
+    import mail_alerts
+    if not mail_alerts.enabled():
+        return 0
+    try:
+        items = mail_alerts.fetch()
+    except Exception as e:
+        print(f"Mails: {e}", file=sys.stderr)
+        last = warned.get("Mails")
+        if not last or (now - datetime.fromisoformat(last)).total_seconds() > 86400:
+            send(f"⚠️ Mail-Abruf: {html.escape(str(e))[:200]}")
+            warned["Mails"] = now.isoformat()
+        return 0
+    sent = 0
+    print(f"Mails: {len(items)} Anzeigen in Suchauftrag-Mails")
+    for key, url, text, site, subject in items:
+        if key in seen:
+            continue
+        seen[key] = now.isoformat()
+        ad = parse_mail_ad(key, url, text, site, subject)
+        if matches(ad):
+            send(message(ad))
+            sent += 1
+    return sent
+
+
 # ---------------------------------------------------------------- Ablauf
 def main():
     state = json.loads(STATE_FILE.read_text()) if STATE_FILE.exists() else {"seen": {}, "warned": {}}
@@ -277,6 +333,8 @@ def main():
                 send(message(ad))
                 sent += 1
             time.sleep(2)
+
+    sent += check_mails(seen, warned, now)
 
     STATE_FILE.write_text(json.dumps(state, indent=1, ensure_ascii=False))
     print(f"Fertig, {sent} neue Anzeigen geschickt.")
