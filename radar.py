@@ -297,6 +297,36 @@ def check_mails(seen, warned, now):
     return sent
 
 
+def check_import(seen, now):
+    """Einmaliger Import bereits bestehender Anzeigen (import.json), z.B. von ImmoScout/Immowelt."""
+    ads = []
+    p = ROOT / "import_immoscout.json"
+    if p.exists():
+        for id_, kalt, m2, zi, title, ort in json.loads(p.read_text(encoding="utf-8")):
+            ads.append({"key": f"immoscout:{id_}", "site": "immoscout", "url": f"https://www.immobilienscout24.de/expose/{id_}",
+                        "title": title, "kalt": kalt, "m2": m2, "zimmer": zi, "ort": ort + ", Mannheim" if ort else None,
+                        "warm": None, "nk": None, "kitchen": detect_kitchen(title)})
+    p = ROOT / "import_immowelt.json"
+    if p.exists():
+        for id_, kalt, warm, nk, m2, zi, title, ort, frei, kaution, kitchen in json.loads(p.read_text(encoding="utf-8")):
+            ads.append({"key": f"immowelt:{id_}", "site": "immowelt", "url": f"https://www.immowelt.de/expose/{id_}",
+                        "title": title, "kalt": kalt, "warm": warm, "nk": nk, "m2": m2, "zimmer": zi, "ort": ort,
+                        "frei": frei, "kaution": kaution, "kitchen": ("abloese", None) if kitchen == "abloese" else kitchen})
+    sent = 0
+    for ad in ads:
+        if ad["key"] in seen:
+            continue
+        seen[ad["key"]] = now.isoformat()
+        for f in ("heiz", "kaution", "frei"):
+            ad.setdefault(f, None)
+        if not ad["warm"] and ad["kalt"] and ad["nk"]:
+            ad["warm"] = ad["kalt"] + ad["nk"]
+        if matches(ad):
+            send(message(ad))
+            sent += 1
+    return sent
+
+
 # ---------------------------------------------------------------- Ablauf
 def main():
     state = json.loads(STATE_FILE.read_text()) if STATE_FILE.exists() else {"seen": {}, "warned": {}}
@@ -335,6 +365,7 @@ def main():
             time.sleep(2)
 
     sent += check_mails(seen, warned, now)
+    sent += check_import(seen, now)
 
     STATE_FILE.write_text(json.dumps(state, indent=1, ensure_ascii=False))
     print(f"Fertig, {sent} neue Anzeigen geschickt.")
