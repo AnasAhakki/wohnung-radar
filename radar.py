@@ -263,8 +263,8 @@ def parse_mail_ad(key, url, text, site, subject):
     ad["m2"] = find_number(text, r"(\d+(?:,\d+)?)\s*(?:m²|qm)")
     ad["zimmer"] = find_number(text, r"(\d(?:,5)?)\s*(?:Zi\.?|Zimmer)\b") \
         or find_number(text, r"Zimmer\s*:?\s*\n?\s*(\d(?:,5)?)\b")
-    m = re.search(r"([^\n]{0,50}\b6\d{4}\b[^\n]{0,30})", text) or re.search(r"([^\n]{0,40}Mannheim[^\n]{0,30})", text)
-    ad["ort"] = m.group(1).strip(" ,·|") if m else None
+    m = re.search(r"^([^\n]*\b6\d{4}\b[^\n]*)$", text, re.M) or re.search(r"^([^\n]*Mannheim[^\n]*)$", text, re.M)
+    ad["ort"] = m.group(1).strip(" ,·|")[:80] if m and m.group(1).strip() != title.strip() else None
     ad["kitchen"] = detect_kitchen(text)
     if not ad["warm"] and ad["kalt"] and ad["nk"]:
         ad["warm"] = ad["kalt"] + ad["nk"]
